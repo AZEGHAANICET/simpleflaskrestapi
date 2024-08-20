@@ -1,5 +1,5 @@
 import uuid
-from flask import Flask, request
+from flask import Flask, request, abort
 from db import stores, items
 
 app = Flask(__name__)
@@ -22,8 +22,15 @@ def create_store():
 @app.post("/item")
 def create_item():
     item_data = request.get_json()
+    if("price" not in item_data or "name" not in item_data or "store_id" not in item_data):
+        abort(404,description="Bad request. Ensure 'price', 'store_id', and 'name' are include in the JSON payload")
+
+    for item in items.values():
+        if(item_data["name"]==item["name"] and item_data["store_id"]==item["store_id"]):
+            abort(404, description=f"{item_data.name} already exists!!!")
+
     if item_data["store_id"] not in stores:
-        return {"message": "Store not found"}, 404
+        abort(404, description="Store not found")
     item_id = uuid.uuid4().hex
     new_item = {**item_data, "id": item_id}
     items[item_id] = new_item
@@ -33,7 +40,7 @@ def create_item():
 @app.get("/item/<string:name>")
 def get_item(name):
     if name not in items:
-        return {"message": "Store not found"}, 404
+        abort(404, description="Store not found")
     return items[name]
 
 if __name__ == '__main__':
