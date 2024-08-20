@@ -1,50 +1,40 @@
+import uuid
 from flask import Flask, request
+from db import stores, items
 
 app = Flask(__name__)
-
-stores = [
-    {
-        "name": "My Store",
-        "items": [
-            {
-                "name": "Chair",
-                "price": 150
-            }
-        ]
-    }
-]
 
 
 @app.get("/store")
 def get_stores():
-    return {"stores": stores}
+    return {"stores": stores.values()}
+
 
 @app.post("/store")
 def create_store():
-    request_data = request.get_json()
-    new_store = {"name":request_data["name"], "items":[]}
-@app.post("/store/<string:name>/item")
-def create_item(name):
-    request_data = request.get_json()
-    for store in stores:
-        if store["name"] == name:
-            new_item = {"name": request_data["name"], "price": request_data["price"]}
-            store["items"].append(new_item)
-            return new_item, 201
-    return {"message": "Store not found"}, 404
+    stores_data = request.get_json()
+    store_id = uuid.uuid4().hex
+    new_store = {**stores_data, "id": store_id}
+    stores[store_id] = new_store
+    return new_store, 201
 
 
-@app.get("/store/<string:name>/item")
-def get_item_in_store(name):
-    for store in stores:
-        if store["name"] == name:
-            return {"items":store["items"]}
-    return {"message" : "Store not found"}, 404
+@app.post("/item")
+def create_item():
+    item_data = request.get_json()
+    if item_data["store_id"] not in stores:
+        return {"message": "Store not found"}, 404
+    item_id = uuid.uuid4().hex
+    new_item = {**item_data, "id": item_id}
+    items[item_id] = new_item
+    return new_item, 201
 
 
-
-
-
+@app.get("/item/<string:name>")
+def get_item(name):
+    if name not in items:
+        return {"message": "Store not found"}, 404
+    return items[name]
 
 if __name__ == '__main__':
     app.run()
